@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Date Calculator</title>
+<meta name="theme-color" content="#0A6CF0">
+<meta name="description" content="Add or subtract days, weeks, months or years and see the result on a calendar.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DateCalc">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+  --bg: #EAF0F8;
+  --surface: #FFFFFF;
+  --ink: #14213D;
+  --muted: #586884;
+  --line: #D2DBEA;
+  --field: #F4F7FC;
+  --start: #087A70;
+  --on-start: #FFFFFF;
+  --end: #F0A800;
+  --on-end: #14213D;
+  --range: #D5ECEA;
+  --hero: #14213D;
+  --hero-ink: #F4F7FC;
+  --hero-muted: #AEBBD4;
+  --focus: #2B59C3;
+  --display: 'Bricolage Grotesque', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0C1524;
+    --surface: #142136;
+    --ink: #E9EFFA;
+    --muted: #93A3BF;
+    --line: #263650;
+    --field: #0F1B2D;
+    --start: #2EC4B3;
+    --on-start: #062028;
+    --end: #F5B72E;
+    --on-end: #14213D;
+    --range: #173B47;
+    --hero: #1E3559;
+    --hero-ink: #F4F7FC;
+    --hero-muted: #A9B8D3;
+    --focus: #8FB0FF;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0C1524;
+  --surface: #142136;
+  --ink: #E9EFFA;
+  --muted: #93A3BF;
+  --line: #263650;
+  --field: #0F1B2D;
+  --start: #2EC4B3;
+  --on-start: #062028;
+  --end: #F5B72E;
+  --on-end: #14213D;
+  --range: #173B47;
+  --hero: #1E3559;
+  --hero-ink: #F4F7FC;
+  --hero-muted: #A9B8D3;
+  --focus: #8FB0FF;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.45 var(--body);
+  -webkit-text-size-adjust: 100%;
+}
+button, input { font-family: inherit; }
+
+.app { max-width: 1040px; margin: 0 auto; padding: 16px 16px 32px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+h1 { margin: 0; font: 800 clamp(26px, 5vw, 34px)/1.1 var(--display); letter-spacing: -0.02em; }
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "tabs" "controls" "hero" "cal" "hist";
+}
+@media (min-width: 860px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas: "tabs tabs" "controls cal" "hero cal" "hist cal";
+    align-items: start;
+  }
+}
+.tabs { grid-area: tabs; }
+.controls { grid-area: controls; }
+.hero { grid-area: hero; }
+.cal { grid-area: cal; }
+.hist { grid-area: hist; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 16px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  font: 600 15px var(--body); text-decoration: none; cursor: pointer;
+}
+.btn:hover { background: var(--field); }
+.btn:focus-visible, .chip:focus-visible, .tab:focus-visible, .cell:focus-visible, .hist-item:focus-visible, .icon-btn:focus-visible, .in:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+
+.seg-tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.tab {
+  flex: 1; min-height: 46px; border: 0; border-radius: 12px; background: transparent;
+  color: var(--muted); font: 600 16px var(--body); cursor: pointer;
+}
+.tab[aria-selected="true"] { background: var(--ink); color: var(--surface); }
+
+.lbl { display: block; margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.in {
+  width: 100%; min-height: 48px; padding: 0 14px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--field); color: var(--ink);
+  font: 500 17px var(--body);
+}
+.row { display: flex; gap: 8px; align-items: stretch; }
+.row .in { flex: 1; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; }
+
+.seg { display: flex; gap: 2px; padding: 3px; background: var(--field); border: 1px solid var(--line); border-radius: 12px; }
+.seg label { position: relative; flex: 1; }
+.seg input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.seg span {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 40px; border-radius: 9px;
+  font-size: 15px; font-weight: 600; color: var(--muted);
+}
+.seg input:checked + span { background: var(--ink); color: var(--surface); }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--field); color: var(--ink);
+  font: 600 15px var(--body); cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--range); border-color: var(--start); }
+
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--start); }
+.check.off { color: var(--muted); cursor: default; }
+
+/* Result */
+.hero { background: var(--hero); color: var(--hero-ink); border-radius: 24px; padding: 20px; display: grid; gap: 16px; }
+.hero-main { display: flex; align-items: center; gap: 18px; }
+.tile {
+  flex: none; width: 96px; border-radius: 16px; overflow: hidden; text-align: center;
+  background: #FFFFFF; color: #14213D;
+}
+.tile .mo { background: var(--end); color: var(--on-end); font-weight: 700; font-size: 14px; padding: 4px 0; }
+.tile .num { font: 800 46px/1.1 var(--display); padding: 6px 4px 8px; letter-spacing: -0.02em; }
+.hero-text { min-width: 0; }
+.hero h2 { margin: 0; font: 800 clamp(30px, 7vw, 44px)/1.05 var(--display); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hero .date { margin-top: 2px; font-size: 18px; font-weight: 500; }
+.hero .note { margin-top: 8px; font-size: 14px; color: var(--hero-muted); }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero .btn { background: transparent; border-color: rgba(255,255,255,.35); color: var(--hero-ink); }
+.hero .btn:hover { background: rgba(255,255,255,.1); }
+.hero .btn:focus-visible { outline-color: #FFFFFF; }
+
+/* Calendar */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.cal-head h3 { margin: 0; font: 800 22px/1.2 var(--display); letter-spacing: -0.01em; text-align: center; flex: 1; }
+.icon-btn {
+  width: 44px; height: 44px; flex: none; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--field); color: var(--ink);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.icon-btn:hover { background: var(--range); }
+.jumps { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.dow, .days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.dow span { text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); padding: 6px 0; }
+.cell {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  height: 46px; padding: 0; border: 0; background: none;
+  color: var(--ink); font: 500 16px var(--body); cursor: default;
+}
+button.cell { cursor: pointer; }
+.cell .n { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; position: relative; z-index: 1; }
+.cell.we .n { color: var(--muted); }
+.cell.band { background: var(--range); }
+.cell.band-r { background: linear-gradient(to right, transparent 50%, var(--range) 50%); }
+.cell.band-l { background: linear-gradient(to left, transparent 50%, var(--range) 50%); }
+.cell.today .n { box-shadow: inset 0 0 0 2px var(--ink); }
+.cell.is-start .n { background: var(--start); color: var(--on-start); font-weight: 700; }
+.cell.is-end .n { background: var(--end); color: var(--on-end); font-weight: 700; }
+.cell.is-start.is-end .n { box-shadow: 0 0 0 3px var(--start); }
+button.cell:not(.is-start):not(.is-end):hover .n { background: var(--field); box-shadow: inset 0 0 0 1px var(--line); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dot.s { background: var(--start); }
+.dot.e { background: var(--end); }
+.dot.t { box-shadow: inset 0 0 0 2px var(--ink); }
+.tip { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+
+/* History */
+.hist h3 { margin: 0 0 8px; font: 800 18px/1.2 var(--display); }
+.hist-list { display: grid; gap: 6px; }
+.hist-item {
+  text-align: left; min-height: 44px; padding: 8px 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--field); color: var(--ink);
+  font: 500 15px var(--body); cursor: pointer;
+}
+.hist-item:hover { background: var(--range); }
+.hist-empty { margin: 0; font-size: 14px; color: var(--muted); }
+.link-btn { border: 0; background: none; color: var(--muted); font: 600 14px var(--body); text-decoration: underline; cursor: pointer; min-height: 40px; padding: 0 4px; }
+.hist-head { display: flex; align-items: center; justify-content: space-between; }
+.foot { margin: 20px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
+
+/* Greeting, clock, weather */
+.hello {
+  display: grid; gap: 14px 16px; margin-bottom: 16px; padding: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "greet greet" "clock weather";
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+}
+.hello-greet { grid-area: greet; }
+.hello-clock { grid-area: clock; }
+.hello-weather { grid-area: weather; }
+.hello-clock, .hello-weather { padding-top: 14px; border-top: 1px solid var(--line); min-width: 0; }
+@media (min-width: 860px) {
+  .hello { grid-template-columns: 1.2fr .8fr 1.3fr; grid-template-areas: "greet clock weather"; align-items: center; }
+  .hello-clock, .hello-weather { padding-top: 0; border-top: 0; border-left: 1px solid var(--line); padding-left: 20px; }
+}
+@media (max-width: 380px) {
+  .hello { grid-template-columns: 1fr; grid-template-areas: "greet" "clock" "weather"; }
+}
+.hello-line { font-size: 15px; font-weight: 600; color: var(--muted); }
+.hello-name { font: 800 clamp(26px, 6vw, 36px)/1.1 var(--display); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hello-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.name-edit { margin-top: 10px; }
+.clock { font: 800 clamp(30px, 8vw, 40px)/1 var(--display); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ampm { margin-left: 6px; font: 600 15px var(--body); color: var(--muted); letter-spacing: 0; }
+.clock-date { margin-top: 6px; font-size: 14px; color: var(--muted); }
+.w-main { display: flex; align-items: center; gap: 10px; }
+.w-icon { font-size: 30px; line-height: 1; }
+.w-temp { font: 800 clamp(26px, 7vw, 34px)/1 var(--display); letter-spacing: -0.02em; }
+.w-desc { font-weight: 600; margin-top: 4px; }
+.w-more, .w-place, .w-msg { font-size: 14px; color: var(--muted); }
+.w-place { margin-top: 2px; color: var(--ink); font-weight: 600; }
+.w-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.btn.sm { min-height: 40px; padding: 0 12px; font-size: 14px; }
+#cityBox { margin-top: 8px; }
+
+@media (max-width: 380px) {
+  .hero-main { gap: 12px; }
+  .tile { width: 80px; }
+  .tile .num { font-size: 38px; }
+  .two { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="top">
+    <h1>Date Calculator</h1>
+    <button class="btn" id="theme" type="button">Dark mode</button>
+  </div>
+
+  <section class="hello" aria-label="Welcome">
+    <div class="hello-greet">
+      <div class="hello-line" id="greetLine"></div>
+      <div class="hello-name" id="greetName"></div>
+      <div class="hello-actions">
+        <button class="link-btn" id="nameBtn" type="button">Add your name</button>
+        <button class="link-btn" id="signOutBtn" type="button" hidden>Sign out</button>
+      </div>
+      <div class="name-edit" id="nameEdit" hidden>
+        <label class="lbl" for="nameInput">Your name</label>
+        <div class="row">
+          <input class="in" id="nameInput" type="text" maxlength="30" autocomplete="given-name" placeholder="Your name">
+          <button class="btn" id="nameSave" type="button">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hello-clock">
+      <div class="clock"><span id="clockTime">--:--</span><span class="ampm" id="clockAmPm"></span></div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+
+    <div class="hello-weather" id="weather">
+      <div id="wReady" hidden>
+        <div class="w-main">
+          <span class="w-icon" id="wIcon" aria-hidden="true"></span>
+          <span class="w-temp" id="wTemp"></span>
+        </div>
+        <div class="w-desc" id="wDesc"></div>
+        <div class="w-more" id="wMore"></div>
+        <div class="w-place" id="wPlace"></div>
+      </div>
+      <div class="w-msg" id="wIdle">See the weather where you are.</div>
+      <div class="w-msg" id="wLoading" hidden role="status"><span id="wLoadingMsg">Getting weather...</span></div>
+      <div class="w-msg" id="wError" hidden role="alert"><span id="wErrMsg"></span></div>
+      <div class="w-btns">
+        <button class="btn sm" type="button" id="locBtn">Use my location</button>
+        <button class="btn sm" type="button" id="cityBtn">Search city</button>
+      </div>
+      <div class="row" id="cityBox" hidden>
+        <input class="in" id="cityInput" type="text" maxlength="60" placeholder="City name" aria-label="City name">
+        <button class="btn" type="button" id="cityGo">Go</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="tabs">
+      <div class="seg-tabs" role="tablist" aria-label="Calculator type">
+        <button class="tab" role="tab" id="tab-add" aria-selected="true" type="button">Add or subtract</button>
+        <button class="tab" role="tab" id="tab-between" aria-selected="false" type="button">Days between</button>
+      </div>
+    </div>
+
+    <section class="panel controls" aria-label="Inputs">
+      <div id="addFields">
+        <div class="field">
+          <label class="lbl" for="start">Start date</label>
+          <div class="row">
+            <input class="in" type="date" id="start" min="1900-01-01" max="2999-12-31">
+            <button class="btn" type="button" id="todayBtn">Today</button>
+          </div>
+        </div>
+        <div class="field two">
+          <div>
+            <label class="lbl" for="amount">How many?</label>
+            <input class="in" type="number" id="amount" inputmode="numeric" min="0" max="100000" step="1" value="60">
+          </div>
+          <div>
+            <span class="lbl" id="dirLbl">Direction</span>
+            <div class="seg" role="radiogroup" aria-labelledby="dirLbl">
+              <label><input type="radio" name="dir" value="1" checked><span>After</span></label>
+              <label><input type="radio" name="dir" value="-1"><span>Before</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="unitLbl">Unit</span>
+          <div class="seg" role="radiogroup" aria-labelledby="unitLbl">
+            <label><input type="radio" name="unit" value="days" checked><span>Days</span></label>
+            <label><input type="radio" name="unit" value="weeks"><span>Weeks</span></label>
+            <label><input type="radio" name="unit" value="months"><span>Months</span></label>
+            <label><input type="radio" name="unit" value="years"><span>Years</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl">Quick pick</span>
+          <div class="chips" id="chips">
+            <button class="chip" type="button" data-n="7" aria-pressed="false">7</button>
+            <button class="chip" type="button" data-n="14" aria-pressed="false">14</button>
+            <button class="chip" type="button" data-n="30" aria-pressed="false">30</button>
+            <button class="chip" type="button" data-n="60" aria-pressed="true">60</button>
+            <button class="chip" type="button" data-n="90" aria-pressed="false">90</button>
+            <button class="chip" type="button" data-n="180" aria-pressed="false">180</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="check" id="workWrap"><input type="checkbox" id="work"> Working days only (skip Sat and Sun)</label>
+        </div>
+      </div>
+
+      <div id="betweenFields" hidden>
+        <div class="field">
+          <label class="lbl" for="from">From</label>
+          <input class="in" type="date" id="from" min="1900-01-01" max="2999-12-31">
+        </div>
+        <div class="field">
+          <label class="lbl" for="to">To</label>
+          <input class="in" type="date" id="to" min="1900-01-01" max="2999-12-31">
+        </div>
+        <div class="field">
+          <button class="btn" type="button" id="swap">Swap dates</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero" aria-label="Result">
+      <div class="hero-main">
+        <div class="tile" aria-hidden="true">
+          <div class="mo" id="tileTop">Nov</div>
+          <div class="num" id="tileNum">20</div>
+        </div>
+        <div class="hero-text" aria-live="polite">
+          <h2 id="heroTitle">Friday</h2>
+          <div class="date" id="heroDate">20 November 2026</div>
+          <div class="note" id="heroNote"></div>
+          <div class="note" id="heroFrom"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="copy">Copy result</button>
+        <a class="btn" id="share" target="_blank" rel="noopener" href="https://wa.me/">Share on WhatsApp</a>
+      </div>
+    </section>
+
+    <section class="panel cal" aria-label="Calendar">
+      <div class="cal-head">
+        <button class="icon-btn" type="button" id="prev" aria-label="Previous month">&#8249;</button>
+        <h3 id="calTitle"></h3>
+        <button class="icon-btn" type="button" id="next" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="jumps">
+        <button class="chip" type="button" id="jumpStart">Go to start</button>
+        <button class="chip" type="button" id="jumpEnd">Go to result</button>
+      </div>
+      <div class="dow" aria-hidden="true">
+        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+      </div>
+      <div class="days" id="days"></div>
+      <div class="legend">
+        <span><i class="dot s"></i><span id="legStart">Start</span></span>
+        <span><i class="dot e"></i><span id="legEnd">Result</span></span>
+        <span><i class="dot t"></i>Today</span>
+      </div>
+      <p class="tip" id="calTip">Tap any date to use it as your start date.</p>
+    </section>
+
+    <section class="panel hist" aria-label="Recent calculations">
+      <div class="hist-head">
+        <h3>Recent</h3>
+        <button class="link-btn" type="button" id="clearHist" hidden>Clear</button>
+      </div>
+      <div class="hist-list" id="histList"></div>
+    </section>
+  </div>
+
+  <p class="foot">Everything runs in your browser. Nothing is sent anywhere.</p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  var MS = 86400000;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var HKEY = 'datecalc.history.v1';
+  var TKEY = 'datecalc.theme';
+
+  var F = {
+    wd: new Intl.DateTimeFormat('en-IN', { weekday: 'long' }),
+    long: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+    short: new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    mon: new Intl.DateTimeFormat('en-IN', { month: 'short' })
+  };
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseISO(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+    if (!m) return null;
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function today() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function dim(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function addMonths(d, n) {
+    var t = d.getFullYear() * 12 + d.getMonth() + n;
+    var y = Math.floor(t / 12), m = ((t % 12) + 12) % 12;
+    return new Date(y, m, Math.min(d.getDate(), dim(y, m)));
+  }
+  function addWork(d, n, dir) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()), left = n;
+    while (left > 0) {
+      x = addDays(x, dir);
+      var w = x.getDay();
+      if (w !== 0 && w !== 6) left--;
+    }
+    return x;
+  }
+  function diffDays(a, b) {
+    return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / MS);
+  }
+  function workingBetween(a, b) {
+    var lo = a < b ? a : b, hi = a < b ? b : a, c = 0, x = lo;
+    while (x < hi) { x = addDays(x, 1); var w = x.getDay(); if (w !== 0 && w !== 6) c++; }
+    return c;
+  }
+  function ymd(a, b) {
+    if (a > b) { var t = a; a = b; b = t; }
+    var y = b.getFullYear() - a.getFullYear();
+    var m = b.getMonth() - a.getMonth();
+    var d = b.getDate() - a.getDate();
+    if (d < 0) { m--; d += dim(b.getFullYear(), b.getMonth() - 1); }
+    if (m < 0) { y--; m += 12; }
+    return { y: y, m: m, d: d };
+  }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  var t0 = today();
+  var state = {
+    mode: 'add', start: t0, dir: 1, amount: 60, unit: 'days', work: false,
+    from: t0, to: addDays(t0, 30), viewY: t0.getFullYear(), viewM: t0.getMonth()
+  };
+  var last = null, lastLabel = '', saveTimer = null, copyTimer = null;
+
+  function compute() {
+    if (state.mode === 'add') {
+      var s = state.start, n = state.amount, e;
+      if (state.unit === 'days') e = state.work ? addWork(s, n, state.dir) : addDays(s, state.dir * n);
+      else if (state.unit === 'weeks') e = addDays(s, state.dir * n * 7);
+      else if (state.unit === 'months') e = addMonths(s, state.dir * n);
+      else e = addMonths(s, state.dir * n * 12);
+      return { a: s, b: e };
+    }
+    return { a: state.from, b: state.to };
+  }
+
+  function rel(d) {
+    var n = diffDays(today(), d);
+    if (n === 0) return 'That is today';
+    if (n === 1) return 'Tomorrow';
+    if (n === -1) return 'Yesterday';
+    return n > 0 ? plural(n, 'day') + ' from today' : plural(-n, 'day') + ' ago';
+  }
+  function full(d) { return F.wd.format(d) + ', ' + F.long.format(d); }
+
+  function writeControls() {
+    $('#start').value = iso(state.start);
+    $('#amount').value = state.amount;
+    $('#from').value = iso(state.from);
+    $('#to').value = iso(state.to);
+    $$('input[name="dir"]').forEach(function (r) { r.checked = (+r.value === state.dir); });
+    $$('input[name="unit"]').forEach(function (r) { r.checked = (r.value === state.unit); });
+    $('#work').checked = state.work;
+  }
+
+  function readInputs() {
+    if (state.mode === 'add') {
+      var s = parseISO($('#start').value);
+      if (!s) return false;
+      state.start = s;
+      var raw = $('#amount').value;
+      var n = raw === '' ? 0 : Math.max(0, Math.min(100000, parseInt(raw, 10) || 0));
+      state.amount = n;
+    } else {
+      var f = parseISO($('#from').value), t = parseISO($('#to').value);
+      if (!f || !t) return false;
+      state.from = f; state.to = t;
+    }
+    return true;
+  }
+
+  function syncControls() {
+    $$('.chip[data-n]').forEach(function (c) { c.setAttribute('aria-pressed', String(+c.dataset.n === state.amount)); });
+    var canWork = state.unit === 'days';
+    $('#work').disabled = !canWork;
+    $('#workWrap').classList.toggle('off', !canWork);
+  }
+
+  function showEmpty(msg) {
+    $('#tileTop').textContent = '--';
+    $('#tileNum').textContent = '--';
+    $('#tileNum').style.fontSize = '';
+    $('#heroTitle').textContent = 'Pick a date';
+    $('#heroDate').textContent = msg || 'Choose valid dates to see the result.';
+    $('#heroNote').textContent = '';
+    $('#heroFrom').textContent = '';
+    last = null;
+    $('#days').innerHTML = '';
+  }
+
+  function renderHero(a, b) {
+    var text, label, num;
+    if (state.mode === 'add') {
+      var n = state.amount;
+      var word = (state.unit === 'days' && state.work) ? 'working day' : state.unit.slice(0, -1);
+      var phrase = plural(n, word) + ' ' + (state.dir > 0 ? 'after' : 'before');
+      $('#tileTop').textContent = F.mon.format(b);
+      num = String(b.getDate());
+      $('#heroTitle').textContent = F.wd.format(b);
+      $('#heroDate').textContent = F.long.format(b);
+      $('#heroNote').textContent = rel(b);
+      $('#heroFrom').textContent = phrase + ' ' + full(a);
+      text = phrase + ' ' + full(a) + ' is ' + full(b) + '.';
+      label = phrase + ' ' + F.short.format(a) + ': ' + F.short.format(b);
+    } else {
+      var days = Math.abs(diffDays(a, b));
+      var p = ymd(a, b), wk = Math.floor(days / 7), rem = days % 7;
+      var parts = [];
+      if (p.y) parts.push(plural(p.y, 'year'));
+      if (p.m) parts.push(plural(p.m, 'month'));
+      if (p.d) parts.push(plural(p.d, 'day'));
+      $('#tileTop').textContent = days === 1 ? 'day' : 'days';
+      num = String(days);
+      var weeksText = days === 0 ? 'Same day' : (wk > 0 ? plural(wk, 'week') + (rem ? ' ' + plural(rem, 'day') : '') : plural(days, 'day'));
+      $('#heroTitle').textContent = weeksText;
+      $('#heroDate').textContent = parts.length ? parts.join(', ') : 'Same day';
+      $('#heroNote').textContent = plural(workingBetween(a, b), 'working day') + ' (Mon to Fri)';
+      $('#heroFrom').textContent = full(a) + ' to ' + full(b) + (a > b ? ' (end is before start)' : '');
+      text = plural(days, 'day') + ' between ' + full(a) + ' and ' + full(b) + '.';
+      label = plural(days, 'day') + ': ' + F.short.format(a) + ' to ' + F.short.format(b);
+    }
+    var tn = $('#tileNum');
+    tn.textContent = num;
+    tn.style.fontSize = num.length > 4 ? '26px' : (num.length > 3 ? '34px' : '');
+    $('#share').href = 'https://wa.me/?text=' + encodeURIComponent(text);
+    $('#copy').dataset.text = text;
+    lastLabel = label;
+  }
+
+  function renderCal() {
+    if (!last) return;
+    var a = last.a, b = last.b;
+    var y = state.viewY, m = state.viewM;
+    $('#calTitle').textContent = MONTHS[m] + ' ' + y;
+    var lo = a < b ? a : b, hi = a < b ? b : a;
+    var same = +a === +b, tt = +today();
+    var first = new Date(y, m, 1).getDay(), n = dim(y, m);
+    var clickable = state.mode === 'add';
+    var h = '', i, d;
+    for (i = 0; i < first; i++) h += '<span aria-hidden="true"></span>';
+    for (d = 1; d <= n; d++) {
+      var dt = new Date(y, m, d), v = +dt, cls = ['cell'], w = dt.getDay();
+      if (w === 0 || w === 6) cls.push('we');
+      if (v === tt) cls.push('today');
+      if (v === +a) cls.push('is-start');
+      if (v === +b) cls.push('is-end');
+      if (!same) {
+        if (v > +lo && v < +hi) cls.push('band');
+        else if (v === +lo) cls.push('band-r');
+        else if (v === +hi) cls.push('band-l');
+      }
+      var label = full(dt);
+      if (v === +a) label += ', start date';
+      if (v === +b) label += state.mode === 'add' ? ', result' : ', end date';
+      if (v === tt) label += ', today';
+      if (clickable) {
+        h += '<button type="button" class="' + cls.join(' ') + '" data-iso="' + iso(dt) + '" aria-label="' + label + '"><span class="n">' + d + '</span></button>';
+      } else {
+        h += '<div class="' + cls.join(' ') + '" title="' + label + '"><span class="n">' + d + '</span></div>';
+      }
+    }
+    $('#days').innerHTML = h;
+    $('#legEnd').textContent = state.mode === 'add' ? 'Result' : 'End';
+    $('#jumpEnd').textContent = state.mode === 'add' ? 'Go to result' : 'Go to end';
+    $('#calTip').hidden = !clickable;
+  }
+
+  function update(jump) {
+    if (!readInputs()) { syncControls(); showEmpty(); return; }
+    syncControls();
+    var r = compute();
+    if (isNaN(r.b.getTime())) { showEmpty('That result is outside the supported dates.'); return; }
+    last = r;
+    renderHero(r.a, r.b);
+    if (jump !== false) { state.viewY = r.b.getFullYear(); state.viewM = r.b.getMonth(); }
+    renderCal();
+    scheduleSave();
+  }
+
+  function setMode(m) {
+    state.mode = m;
+    $('#addFields').hidden = m !== 'add';
+    $('#betweenFields').hidden = m !== 'between';
+    $('#tab-add').setAttribute('aria-selected', String(m === 'add'));
+    $('#tab-between').setAttribute('aria-selected', String(m === 'between'));
+    update(true);
+  }
+
+  function shiftMonth(delta) {
+    var t = state.viewY * 12 + state.viewM + delta;
+    state.viewY = Math.floor(t / 12);
+    state.viewM = ((t % 12) + 12) % 12;
+    renderCal();
+  }
+
+  /* History */
+  function loadHist() { try { return JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { return []; } }
+  function saveHist(list) { try { localStorage.setItem(HKEY, JSON.stringify(list)); } catch (e) {} }
+  function snapshot() {
+    return { mode: state.mode, start: iso(state.start), dir: state.dir, amount: state.amount, unit: state.unit, work: state.work, from: iso(state.from), to: iso(state.to) };
+  }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      if (!lastLabel) return;
+      var list = loadHist().filter(function (h) { return h.label !== lastLabel; });
+      list.unshift({ label: lastLabel, snap: snapshot() });
+      saveHist(list.slice(0, 6));
+      renderHist();
+    }, 1500);
+  }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function renderHist() {
+    var list = loadHist();
+    var box = $('#histList');
+    $('#clearHist').hidden = list.length === 0;
+    if (!list.length) { box.innerHTML = '<p class="hist-empty">Your recent calculations will appear here.</p>'; return; }
+    box.innerHTML = list.map(function (h, i) {
+      return '<button type="button" class="hist-item" data-i="' + i + '">' + esc(h.label) + '</button>';
+    }).join('');
+  }
+  function applySnap(s) {
+    var st = parseISO(s.start), f = parseISO(s.from), t = parseISO(s.to);
+    if (!st || !f || !t) return;
+    state.start = st; state.from = f; state.to = t;
+    state.dir = s.dir === -1 ? -1 : 1;
+    state.amount = Math.max(0, Math.min(100000, +s.amount || 0));
+    state.unit = ['days', 'weeks', 'months', 'years'].indexOf(s.unit) >= 0 ? s.unit : 'days';
+    state.work = !!s.work;
+    writeControls();
+    setMode(s.mode === 'between' ? 'between' : 'add');
+  }
+
+  /* Theme */
+  function effectiveDark() {
+    var t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  function syncThemeBtn() { $('#theme').textContent = effectiveDark() ? 'Light mode' : 'Dark mode'; }
+  try {
+    var saved = localStorage.getItem(TKEY);
+    if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved);
+  } catch (e) {}
+
+  /* Events */
+  $('#tab-add').addEventListener('click', function () { setMode('add'); });
+  $('#tab-between').addEventListener('click', function () { setMode('between'); });
+  ['#start', '#amount', '#from', '#to'].forEach(function (id) {
+    $(id).addEventListener('input', function () { update(true); });
+  });
+  $('#todayBtn').addEventListener('click', function () { state.start = today(); $('#start').value = iso(state.start); update(true); });
+  $$('input[name="dir"]').forEach(function (r) {
+    r.addEventListener('change', function () { state.dir = +r.value; update(true); });
+  });
+  $$('input[name="unit"]').forEach(function (r) {
+    r.addEventListener('change', function () { state.unit = r.value; update(true); });
+  });
+  $('#work').addEventListener('change', function () { state.work = $('#work').checked; update(true); });
+  $('#chips').addEventListener('click', function (e) {
+    var c = e.target.closest('.chip[data-n]');
+    if (!c) return;
+    state.amount = +c.dataset.n;
+    $('#amount').value = state.amount;
+    update(true);
+  });
+  $('#swap').addEventListener('click', function () {
+    var f = parseISO($('#from').value), t = parseISO($('#to').value);
+    if (!f || !t) return;
+    $('#from').value = iso(t); $('#to').value = iso(f);
+    update(true);
+  });
+  $('#prev').addEventListener('click', function () { shiftMonth(-1); });
+  $('#next').addEventListener('click', function () { shiftMonth(1); });
+  $('#jumpStart').addEventListener('click', function () {
+    if (!last) return;
+    state.viewY = last.a.getFullYear(); state.viewM = last.a.getMonth(); renderCal();
+  });
+  $('#jumpEnd').addEventListener('click', function () {
+    if (!last) return;
+    state.viewY = last.b.getFullYear(); state.viewM = last.b.getMonth(); renderCal();
+  });
+  $('#days').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-iso]');
+    if (!btn) return;
+    var d = parseISO(btn.dataset.iso);
+    if (!d) return;
+    state.start = d;
+    $('#start').value = iso(d);
+    update(false);
+  });
+  $('#theme').addEventListener('click', function () {
+    var next = effectiveDark() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem(TKEY, next); } catch (e) {}
+    syncThemeBtn();
+  });
+  $('#copy').addEventListener('click', function () {
+    var btn = $('#copy'), text = btn.dataset.text || '';
+    function done(ok) {
+      btn.textContent = ok ? 'Copied' : 'Copy failed';
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(function () { btn.textContent = 'Copy result'; }, 1600);
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        done(ok);
+      } catch (e) { done(false); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else { fallback(); }
+  });
+  $('#histList').addEventListener('click', function (e) {
+    var b = e.target.closest('.hist-item');
+    if (!b) return;
+    var item = loadHist()[+b.dataset.i];
+    if (item) applySnap(item.snap);
+  });
+  $('#clearHist').addEventListener('click', function () { saveHist([]); renderHist(); });
+
+
+  /* ===== Greeting, clock and weather ===== */
+  var HELLO = 'Hai';            // change to 'Hi' if you prefer
+  var NKEY = 'datecalc.name';
+  var PKEY = 'datecalc.place.v1';
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+  function greetingFor(h) {
+    if (h >= 5 && h < 12) return 'Good morning';
+    if (h >= 12 && h < 17) return 'Good afternoon';
+    if (h >= 17 && h < 22) return 'Good evening';
+    return 'Good night';
+  }
+  function renderGreeting() {
+    var name = lsGet(NKEY);
+    $('#greetLine').textContent = greetingFor(new Date().getHours());
+    $('#greetName').textContent = name ? HELLO + ' ' + name : HELLO + ' there';
+    $('#nameBtn').textContent = name ? 'Change name' : 'Add your name';
+    $('#signOutBtn').hidden = !name;
+  }
+  function openNameEdit() {
+    $('#nameEdit').hidden = false;
+    $('#nameInput').value = lsGet(NKEY) || '';
+    $('#nameInput').focus();
+  }
+  function saveName() {
+    var v = $('#nameInput').value.replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (!v) return;
+    lsSet(NKEY, v);
+    $('#nameEdit').hidden = true;
+    renderGreeting();
+  }
+  $('#nameBtn').addEventListener('click', openNameEdit);
+  $('#nameSave').addEventListener('click', saveName);
+  $('#nameInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); saveName(); }
+    if (e.key === 'Escape') { $('#nameEdit').hidden = true; $('#nameBtn').focus(); }
+  });
+  $('#signOutBtn').addEventListener('click', function () {
+    lsDel(NKEY);
+    $('#nameEdit').hidden = true;
+    renderGreeting();
+  });
+
+  var lastMin = -1;
+  var timeFmt = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  var dateFmt = new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  function tick() {
+    var n = new Date(), hh = '', mm = '', ap = '';
+    timeFmt.formatToParts(n).forEach(function (p) {
+      if (p.type === 'hour') hh = p.value;
+      else if (p.type === 'minute') mm = p.value;
+      else if (p.type === 'dayPeriod') ap = p.value;
+    });
+    $('#clockTime').textContent = hh + ':' + mm;
+    $('#clockAmPm').textContent = ap;
+    $('#clockDate').textContent = dateFmt.format(n);
+    if (n.getMinutes() !== lastMin) { lastMin = n.getMinutes(); renderGreeting(); }
+  }
+
+  var WMO = {
+    0: ['Clear sky', '\u2600\uFE0F', '\uD83C\uDF19'], 1: ['Mainly clear', '\uD83C\uDF24\uFE0F', '\uD83C\uDF19'],
+    2: ['Partly cloudy', '\u26C5', '\u2601\uFE0F'], 3: ['Overcast', '\u2601\uFE0F'],
+    45: ['Fog', '\uD83C\uDF2B\uFE0F'], 48: ['Fog', '\uD83C\uDF2B\uFE0F'],
+    51: ['Light drizzle', '\uD83C\uDF26\uFE0F'], 53: ['Drizzle', '\uD83C\uDF26\uFE0F'], 55: ['Heavy drizzle', '\uD83C\uDF27\uFE0F'],
+    56: ['Freezing drizzle', '\uD83C\uDF27\uFE0F'], 57: ['Freezing drizzle', '\uD83C\uDF27\uFE0F'],
+    61: ['Light rain', '\uD83C\uDF27\uFE0F'], 63: ['Rain', '\uD83C\uDF27\uFE0F'], 65: ['Heavy rain', '\uD83C\uDF27\uFE0F'],
+    66: ['Freezing rain', '\uD83C\uDF27\uFE0F'], 67: ['Freezing rain', '\uD83C\uDF27\uFE0F'],
+    71: ['Light snow', '\u2744\uFE0F'], 73: ['Snow', '\u2744\uFE0F'], 75: ['Heavy snow', '\u2744\uFE0F'], 77: ['Snow grains', '\u2744\uFE0F'],
+    80: ['Light showers', '\uD83C\uDF26\uFE0F'], 81: ['Showers', '\uD83C\uDF27\uFE0F'], 82: ['Heavy showers', '\u26C8\uFE0F'],
+    85: ['Snow showers', '\u2744\uFE0F'], 86: ['Snow showers', '\u2744\uFE0F'],
+    95: ['Thunderstorm', '\u26C8\uFE0F'], 96: ['Thunderstorm with hail', '\u26C8\uFE0F'], 99: ['Thunderstorm with hail', '\u26C8\uFE0F']
+  };
+  function wmo(code, isDay) {
+    var m = WMO[code];
+    if (!m) return { text: 'Unknown', icon: '\uD83C\uDF21\uFE0F' };
+    return { text: m[0], icon: (!isDay && m[2]) ? m[2] : m[1] };
+  }
+
+  var place = null;
+  function loadPlace() {
+    try {
+      var p = JSON.parse(lsGet(PKEY));
+      if (p && isFinite(p.lat) && isFinite(p.lon)) return p;
+    } catch (e) {}
+    return null;
+  }
+  function savePlace() { lsSet(PKEY, JSON.stringify(place)); }
+  function setW(state, msg) {
+    ['Idle', 'Loading', 'Ready', 'Error'].forEach(function (k) { $('#w' + k).hidden = (k.toLowerCase() !== state); });
+    if (msg && state === 'loading') $('#wLoadingMsg').textContent = msg;
+    if (msg && state === 'error') $('#wErrMsg').textContent = msg;
+  }
+  function fetchJSON(url, ms) {
+    var c = new AbortController();
+    var t = setTimeout(function () { c.abort(); }, ms || 10000);
+    return fetch(url, { signal: c.signal }).then(function (r) {
+      clearTimeout(t);
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    }, function (e) { clearTimeout(t); throw e; });
+  }
+  function reverseName(lat, lon) {
+    return fetchJSON('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=en', 8000)
+      .then(function (j) {
+        var parts = [j.city || j.locality || '', j.principalSubdivision || ''].filter(Boolean);
+        if (parts.length === 2 && parts[0] === parts[1]) parts.pop();
+        return parts.join(', ') || j.countryName || 'Your location';
+      })
+      .catch(function () { return 'Your location'; });
+  }
+  function renderWeather(cur) {
+    var info = wmo(cur.weather_code, cur.is_day);
+    $('#wIcon').textContent = info.icon;
+    $('#wTemp').textContent = Math.round(cur.temperature_2m) + '\u00B0C';
+    $('#wDesc').textContent = info.text;
+    $('#wMore').textContent = 'Feels like ' + Math.round(cur.apparent_temperature) + '\u00B0, humidity ' + cur.relative_humidity_2m + '%, wind ' + Math.round(cur.wind_speed_10m) + ' km/h';
+    $('#wPlace').textContent = place.label || 'Your location';
+    setW('ready');
+  }
+  function loadWeather(silent) {
+    if (!place) return;
+    if (!silent) setW('loading', 'Getting weather...');
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat + '&longitude=' + place.lon +
+      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&timezone=auto';
+    fetchJSON(url).then(function (j) {
+      if (!j || !j.current) throw new Error('no data');
+      renderWeather(j.current);
+    }).catch(function () {
+      if (!silent || $('#wReady').hidden) setW('error', 'Could not load the weather. Check your internet and try again.');
+    });
+  }
+  function locate() {
+    if (!navigator.geolocation) { setW('error', 'This device does not support location. Try Search city.'); return; }
+    setW('loading', 'Finding your location...');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = Math.round(pos.coords.latitude * 100) / 100;
+      var lon = Math.round(pos.coords.longitude * 100) / 100;
+      reverseName(lat, lon).then(function (label) {
+        place = { lat: lat, lon: lon, label: label };
+        savePlace();
+        loadWeather();
+      });
+    }, function (err) {
+      var msg = err && err.code === 1 ? 'Location permission was blocked. Allow it in your browser, or use Search city.'
+        : 'Could not get your location. Try again or use Search city.';
+      setW('error', msg);
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+  }
+  function searchCity() {
+    var q = $('#cityInput').value.trim();
+    if (!q) return;
+    setW('loading', 'Searching...');
+    fetchJSON('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=1&language=en&format=json')
+      .then(function (j) {
+        var r = j && j.results && j.results[0];
+        if (!r) { setW('error', 'No city found for "' + q + '". Try another name.'); return; }
+        place = { lat: r.latitude, lon: r.longitude, label: [r.name, r.admin1].filter(Boolean).join(', ') || r.name };
+        savePlace();
+        $('#cityBox').hidden = true;
+        loadWeather();
+      })
+      .catch(function () { setW('error', 'Could not search right now. Check your internet and try again.'); });
+  }
+  $('#locBtn').addEventListener('click', locate);
+  $('#cityBtn').addEventListener('click', function () {
+    var box = $('#cityBox');
+    box.hidden = !box.hidden;
+    if (!box.hidden) $('#cityInput').focus();
+  });
+  $('#cityGo').addEventListener('click', searchCity);
+  $('#cityInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); searchCity(); }
+  });
+
+  function initHello() {
+    renderGreeting();
+    tick();
+    setInterval(tick, 1000);
+    place = loadPlace();
+    if (place) loadWeather();
+    else if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(function (s) {
+        if (s.state === 'granted') locate();
+      }).catch(function () {});
+    }
+    setInterval(function () { if (place && !document.hidden) loadWeather(true); }, 15 * 60 * 1000);
+  }
+
+  /* Init */
+  writeControls();
+  syncThemeBtn();
+  renderHist();
+  setMode('add');
+  initHello();
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js").catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
